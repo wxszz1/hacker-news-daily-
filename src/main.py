@@ -79,6 +79,10 @@ def _push_stories(
         formatter = MessageFormatter()
         message = formatter.format(stories)
 
+        if not message:
+            logger.warning("Formatter returned empty message, skipping push")
+            return
+
         notifier = ServerChanNotifier(config.serverchan.send_key, db)
         title = f"Hacker News 早报 ({len(stories)} 条)"
 
@@ -96,9 +100,12 @@ def _notify_failure(error: Exception) -> None:
 def retry_failed_async(config: AppConfig, db: Database) -> None:
     """异步重试失败记录（不阻塞启动）"""
     def _retry():
-        notifier = ServerChanNotifier(config.serverchan.send_key, db)
-        notifier.retry_failed()
-        logger.info("Retry failed pushes completed")
+        try:
+            notifier = ServerChanNotifier(config.serverchan.send_key, db)
+            notifier.retry_failed()
+            logger.info("Retry failed pushes completed")
+        except Exception as e:
+            logger.exception(f"Retry thread failed: {e}")
 
     thread = threading.Thread(target=_retry, daemon=True)
     thread.start()
