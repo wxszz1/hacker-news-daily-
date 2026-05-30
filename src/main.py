@@ -114,7 +114,7 @@ def main() -> None:
     """主函数"""
     load_dotenv()
     config = load_config()
-    setup_logging(config.logging.dict())
+    setup_logging(config.logging.model_dump())
 
     logger.info("Hacker News Agent starting...")
 

@@ -43,11 +43,7 @@ class Scheduler:
         )
 
         logger.info(f"Scheduler started, cron: {self.config.scheduler.cron}")
-        job = self.scheduler.get_job("daily_hackernews")
-        if job is not None:
-            logger.info(f"Next run: {job.next_run_time}")
-        else:
-            logger.warning("Could not retrieve job to display next run time")
+        logger.info("Scheduler will run daily at the configured time")
 
         try:
             self.scheduler.start()
