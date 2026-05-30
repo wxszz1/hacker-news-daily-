@@ -40,11 +40,28 @@ class ServerChanNotifier:
         """重试失败的推送"""
         with self.db.get_connection() as conn:
             failures = conn.execute(
-                "SELECT id, message FROM failed_pushes WHERE retry_count < 3"
+                "SELECT id, message FROM failed_pushes WHERE retry_count < ?",
+                (self.MAX_RETRIES,)
             ).fetchall()
 
         for failure_id, message in failures:
-            title, content = message.split("\n", 1)
-            if self.send(title, content):
-                with self.db.get_connection() as conn:
-                    conn.execute("DELETE FROM failed_pushes WHERE id = ?", (failure_id,))
+            parts = message.split("\n", 1)
+            if len(parts) < 2:
+                title = parts[0]
+                content = ""
+            else:
+                title, content = parts
+
+            success = self.send(title, content)
+
+            with self.db.get_connection() as conn:
+                if success:
+                    conn.execute(
+                        "DELETE FROM failed_pushes WHERE id = ?",
+                        (failure_id,)
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE failed_pushes SET retry_count = retry_count + 1 WHERE id = ?",
+                        (failure_id,)
+                    )
