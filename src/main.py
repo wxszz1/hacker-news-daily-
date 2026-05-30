@@ -1,0 +1,126 @@
+import time
+import logging
+import threading
+from contextlib import contextmanager
+from typing import Optional
+
+from src.config import load_config, AppConfig
+from src.logging_config import setup_logging
+from src.scraper import HackerNewsScraper
+from src.filter import NewsFilter
+from src.formatter import MessageFormatter
+from src.notifier import ServerChanNotifier
+from src.database import Database
+from src.health import HealthChecker
+from src.scheduler import Scheduler
+
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def timer(operation: str):
+    """执行时间统计上下文管理器"""
+    start = time.time()
+    yield
+    duration = time.time() - start
+    logger.info(f"{operation} completed in {duration:.2f}s")
+
+def run_job() -> None:
+    """单次执行任务（带异常处理）"""
+    try:
+        with timer("Total job"):
+            _execute_job()
+    except Exception as e:
+        logger.exception(f"Job failed: {e}")
+        _notify_failure(e)
+
+def _execute_job() -> None:
+    """执行任务核心逻辑"""
+    config = load_config()
+    db = Database(config.database.path)
+
+    stories = _fetch_stories(config)
+    filtered = _filter_stories(config, stories, db)
+
+    if not filtered:
+        logger.info("No new stories to push")
+        return
+
+    _push_stories(config, filtered, db)
+
+def _fetch_stories(config: AppConfig) -> list[dict]:
+    """爬取阶段"""
+    with timer("Fetch stories"):
+        scraper = HackerNewsScraper()
+        stories = scraper.fetch_top_stories_sync(config.hackernews.top_stories_limit)
+        logger.info(f"Fetched {len(stories)} stories")
+        return stories
+
+def _filter_stories(
+    config: AppConfig,
+    stories: list[dict],
+    db: Database
+) -> list[dict]:
+    """过滤阶段"""
+    with timer("Filter stories"):
+        news_filter = NewsFilter(config.filter)
+        pushed_ids = db.get_pushed_ids()
+        filtered = news_filter.filter(stories, pushed_ids)
+        logger.info(f"After filter: {len(filtered)} stories")
+        return filtered
+
+def _push_stories(
+    config: AppConfig,
+    stories: list[dict],
+    db: Database
+) -> None:
+    """推送阶段"""
+    with timer("Push stories"):
+        formatter = MessageFormatter()
+        message = formatter.format(stories)
+
+        notifier = ServerChanNotifier(config.serverchan.send_key, db)
+        title = f"Hacker News 早报 ({len(stories)} 条)"
+
+        if notifier.send(title, message):
+            for story in stories:
+                db.record_pushed(story["id"], story["title"])
+            logger.info(f"Pushed {len(stories)} stories successfully")
+        else:
+            logger.error("Push failed, will retry next time")
+
+def _notify_failure(error: Exception) -> None:
+    """失败通知"""
+    logger.error(f"Job failed: {error}")
+
+def retry_failed_async(config: AppConfig, db: Database) -> None:
+    """异步重试失败记录（不阻塞启动）"""
+    def _retry():
+        notifier = ServerChanNotifier(config.serverchan.send_key, db)
+        notifier.retry_failed()
+        logger.info("Retry failed pushes completed")
+
+    thread = threading.Thread(target=_retry, daemon=True)
+    thread.start()
+
+def main() -> None:
+    """主函数"""
+    config = load_config()
+    setup_logging(config.logging.dict())
+
+    logger.info("Hacker News Agent starting...")
+
+    db = Database(config.database.path)
+
+    # 健康检查
+    health = HealthChecker(db)
+    health.log_health_status()
+
+    # 异步重试失败记录
+    retry_failed_async(config, db)
+
+    # 启动调度器
+    scheduler = Scheduler(config, run_job)
+    scheduler.start()
+
+if __name__ == "__main__":
+    main()

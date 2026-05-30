@@ -1,0 +1,16 @@
+[Unit]
+Description=Hacker News Agent
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/hacker-news-agent
+ExecStart=/opt/hacker-news-agent/venv/bin/python -m src.main
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

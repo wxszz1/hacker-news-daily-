@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  hackernews:
+    build: .
+    container_name: hackernews-agent
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
