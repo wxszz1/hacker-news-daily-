@@ -45,14 +45,39 @@ class AppConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
 
-def load_config(config_path: str = "config/config.yaml") -> AppConfig:
+def get_project_root() -> Path:
+    """获取项目根目录"""
+    current = Path(__file__).parent
+    while current != current.parent:
+        if (current / "config").exists() and (current / "src").exists():
+            return current
+        current = current.parent
+    return Path(__file__).parent.parent
+
+def load_config(config_path: str = None) -> AppConfig:
     """加载并校验配置文件"""
+    project_root = get_project_root()
+
+    if config_path is None:
+        config_path = project_root / "config" / "config.yaml"
+
     path = Path(config_path)
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
+
+    # 处理数据库和日志路径，使用绝对路径
+    if "database" in data and "path" in data["database"]:
+        db_path = Path(data["database"]["path"])
+        if not db_path.is_absolute():
+            data["database"]["path"] = str(project_root / db_path)
+
+    if "logging" in data and "file" in data["logging"]:
+        log_path = Path(data["logging"]["file"])
+        if not log_path.is_absolute():
+            data["logging"]["file"] = str(project_root / log_path)
 
     try:
         return AppConfig(**data)

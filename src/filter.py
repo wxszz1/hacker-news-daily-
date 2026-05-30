@@ -23,16 +23,13 @@ class NewsFilter:
         # 第二步：按关键词过滤
         keyword_filtered = self._filter_by_keywords(high_score_stories)
 
-        # 第三步：如果关键词过滤后结果太少，回退到仅按热度
-        if len(keyword_filtered) < self.min_results:
-            logger.info(f"Keyword filtering too aggressive ({len(keyword_filtered)} results), "
-                       f"falling back to score-based filtering")
-            result = high_score_stories
-        else:
-            result = keyword_filtered
+        # 第三步：如果关键词过滤后没有结果，不推送（避免推送不相关内容）
+        if not keyword_filtered:
+            logger.info("No stories match keywords, skipping push")
+            return []
 
         # 第四步：排除排除词
-        result = self._exclude_by_keywords(result)
+        result = self._exclude_by_keywords(keyword_filtered)
 
         # 第五步：去重
         result = self._deduplicate(result, pushed_ids)

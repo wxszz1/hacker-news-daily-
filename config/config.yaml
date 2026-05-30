@@ -22,7 +22,7 @@ filter:
     - python
   exclude:                   # 排除关键词
     - hiring
-    - ask hn: who is hiring
+    - "ask hn: who is hiring"
 
 # 推送配置
 serverchan:
