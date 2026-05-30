@@ -1,27 +1,27 @@
 # Hacker News Agent
 
-自动爬取 Hacker News 专项新闻并推送到微信的工具。
+Automatically scrape Hacker News for AI/Agent-related articles and push daily digests to WeChat.
 
-## 功能特性
+## Features
 
-- 每天定时爬取 Hacker News Top Stories
-- 按热度（点赞数）和关键词过滤
-- 自动推送到微信（通过 Server酱）
-- SQLite 存储已推送记录，避免重复
-- 失败重试机制
-- 健康检查和日志记录
+- Daily scheduled scraping of HN Top Stories
+- Filter by score (popularity) and keywords
+- Auto-push to WeChat via Server酱
+- SQLite storage for deduplication
+- Retry mechanism for failed pushes
+- Health check and logging
 
-## 技术栈
+## Tech Stack
 
 - Python 3.11+
-- httpx - HTTP 客户端
-- APScheduler - 定时任务
-- SQLite - 数据存储
-- Server酱 - 微信推送
+- httpx - HTTP client
+- APScheduler - Cron jobs
+- SQLite - State storage
+- Server酱 - WeChat push
 
-## 快速开始
+## Quick Start
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
 python -m venv venv
@@ -29,97 +29,78 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. 配置
+### 2. Configure
 
-复制环境变量模板：
+Copy environment variables template:
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的 Server酱 SendKey：
+Edit `.env` with your Server酱 SendKey:
 
 ```
 SERVERCHAN_KEY=your_send_key_here
 ```
 
-### 3. 运行
+### 3. Run
 
 ```bash
 python -m src.main
 ```
 
-## 配置说明
+## Configuration
 
-配置文件位于 `config/config.yaml`：
+Edit `config/config.yaml`:
 
 ```yaml
 hackernews:
-  top_stories_limit: 30      # 拉取数量
-  request_delay: 0.1         # 请求间隔（秒）
+  top_stories_limit: 30
+  request_delay: 0.1
 
 filter:
-  min_score: 50              # 最低点赞数
-  keywords:                  # 包含关键词
+  min_score: 50
+  keywords:
     - ai
     - llm
     - agent
     - python
-  exclude:                   # 排除关键词
-    - hiring
-
-serverchan:
-  send_key: "${SERVERCHAN_KEY}"
 
 scheduler:
-  cron: "0 8 * * *"         # 每天 08:00 执行
+  cron: "0 8 * * *"
   timezone: "Asia/Shanghai"
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 hacker-news-agent/
 ├── src/
-│   ├── main.py              # 入口 + 调度器
-│   ├── config.py            # 配置加载与校验
-│   ├── logging_config.py    # 日志配置
-│   ├── scraper.py           # 爬虫模块
-│   ├── filter.py            # 过滤模块
-│   ├── formatter.py         # 格式化模块
-│   ├── notifier.py          # 推送模块
-│   ├── database.py          # 数据库模块
-│   └── health.py            # 健康检查
+│   ├── main.py              # Entry point
+│   ├── config.py            # Configuration
+│   ├── scraper.py           # HN API client
+│   ├── filter.py            # Article filter
+│   ├── formatter.py         # Message formatter
+│   ├── notifier.py          # Server酱 push
+│   ├── database.py          # SQLite storage
+│   ├── health.py            # Health check
+│   └── scheduler.py         # Cron scheduler
 ├── config/
-│   ├── config.yaml          # 配置文件
-│   └── hackernews.service   # systemd 服务
-├── tests/                   # 单元测试
+│   └── config.yaml
+├── tests/
 ├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+└── docker-compose.yml
 ```
 
-## 模块说明
+## Deployment
 
-| 模块 | 职责 |
-|------|------|
-| `scraper` | 从 HN API 拉取帖子 |
-| `filter` | 按热度+关键词过滤 |
-| `formatter` | 格式化为 Markdown |
-| `notifier` | 调用 Server酱推送 |
-| `database` | SQLite 状态存储 |
-| `health` | 健康检查 |
-| `scheduler` | 定时任务调度 |
-
-## 部署
-
-### Docker 部署
+### Docker
 
 ```bash
 docker-compose up -d
 ```
 
-### systemd 部署
+### systemd
 
 ```bash
 sudo cp config/hackernews.service /etc/systemd/system/
@@ -127,19 +108,13 @@ sudo systemctl enable hackernews
 sudo systemctl start hackernews
 ```
 
-## 开发
+## Development
 
-### 运行测试
+### Run Tests
 
 ```bash
 pytest tests/
 ```
-
-### 代码规范
-
-- 使用 type hints
-- 遵循 PEP 8
-- 每个模块职责单一
 
 ## License
 
