@@ -11,8 +11,8 @@ class HackerNewsScraper:
     REQUEST_DELAY = 0.1
     TIMEOUT = 10.0
 
-    def __init__(self, use_async: bool = False):
-        self.use_async = use_async
+    def __init__(self) -> None:
+        pass
 
     def fetch_top_stories_sync(self, limit: int = 30) -> list[dict]:
         """同步获取 top stories"""
@@ -47,7 +47,7 @@ class HackerNewsScraper:
 
                 tasks = [self._get_story_detail_async(client, sid) for sid in story_ids[:limit]]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                return [r for r in results if r is not None]
+                return [r for r in results if isinstance(r, dict)]
         except httpx.TimeoutException:
             logger.error("Timeout fetching stories from HN API")
             return []
