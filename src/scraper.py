@@ -16,6 +16,8 @@ class HackerNewsScraper:
 
     def fetch_top_stories_sync(self, limit: int = 30) -> list[dict]:
         """同步获取 top stories"""
+        if limit is None or limit < 1:
+            limit = 30  # default
         try:
             with httpx.Client(timeout=self.TIMEOUT) as client:
                 story_ids = self._fetch_ids_sync(client, "topstories")
@@ -38,6 +40,8 @@ class HackerNewsScraper:
 
     async def fetch_top_stories(self, limit: int = 30) -> list[dict]:
         """异步获取 top stories"""
+        if limit is None or limit < 1:
+            limit = 30  # default
         try:
             async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
                 story_ids = await self._fetch_ids_async(client, "topstories")
@@ -45,7 +49,13 @@ class HackerNewsScraper:
                     logger.warning("No story IDs fetched")
                     return []
 
-                tasks = [self._get_story_detail_async(client, sid) for sid in story_ids[:limit]]
+                semaphore = asyncio.Semaphore(5)  # max 5 concurrent requests
+
+                async def bounded_fetch(sid: int) -> Optional[dict]:
+                    async with semaphore:
+                        return await self._get_story_detail_async(client, sid)
+
+                tasks = [bounded_fetch(sid) for sid in story_ids[:limit]]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 return [r for r in results if isinstance(r, dict)]
         except httpx.TimeoutException:
