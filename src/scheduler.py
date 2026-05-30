@@ -14,7 +14,16 @@ class Scheduler:
 
     def start(self) -> None:
         """启动调度器"""
-        cron_parts = self.config.scheduler.cron.split()
+        try:
+            cron_parts = self.config.scheduler.cron.split()
+            if len(cron_parts) != 5:
+                raise ValueError(
+                    f"Cron expression must have exactly 5 parts (minute hour day month day_of_week), "
+                    f"got {len(cron_parts)}: '{self.config.scheduler.cron}'"
+                )
+        except AttributeError:
+            raise ValueError(f"Invalid cron expression: '{self.config.scheduler.cron}'")
+
         trigger = CronTrigger(
             minute=cron_parts[0],
             hour=cron_parts[1],
@@ -29,15 +38,21 @@ class Scheduler:
             trigger=trigger,
             id="daily_hackernews",
             name="Daily Hacker News Push",
-            misfire_grace_time=3600,
+            misfire_grace_time=self.config.scheduler.misfire_grace_time,
             coalesce=True
         )
 
         logger.info(f"Scheduler started, cron: {self.config.scheduler.cron}")
         job = self.scheduler.get_job("daily_hackernews")
-        logger.info(f"Next run: {job.next_run_time}")
+        if job is not None:
+            logger.info(f"Next run: {job.next_run_time}")
+        else:
+            logger.warning("Could not retrieve job to display next run time")
 
         try:
             self.scheduler.start()
         except (KeyboardInterrupt, SystemExit):
             logger.info("Scheduler stopped gracefully")
+        except Exception as e:
+            logger.error(f"Scheduler encountered an error: {e}")
+            raise

@@ -36,6 +36,7 @@ class LoggingConfig(BaseModel):
 class SchedulerConfig(BaseModel):
     cron: str = Field(default="0 8 * * *")
     timezone: str = Field(default="Asia/Shanghai")
+    misfire_grace_time: int = Field(default=3600, ge=0)
 
 class AppConfig(BaseModel):
     hackernews: HackerNewsConfig = Field(default_factory=HackerNewsConfig)
