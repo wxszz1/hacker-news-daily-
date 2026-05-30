@@ -24,6 +24,21 @@ Every task must pass these checks:
 | **No Regressions** | Existing tests still pass | No test regressions |
 | **Code Quality** | Follows project conventions | Consistent style |
 
+### Strict Code Quality Checks (严格代码质量检查)
+
+| Category | Check | Pass Condition |
+|----------|-------|----------------|
+| **Error Handling** | All external calls have try-except | No unhandled exceptions |
+| **Type Hints** | All functions have type annotations | 100% coverage |
+| **No Hardcoding** | Config values in config files | No magic numbers |
+| **Logging** | Key operations have log statements | Debug/Info/Error levels |
+| **Resource Management** | Files/connections use context managers | No resource leaks |
+| **Security** | No secrets in code, use env vars | No hardcoded credentials |
+| **Performance** | No N+1 queries, proper indexing | Reasonable response times |
+| **Code Duplication** | No copy-paste code | DRY principle followed |
+| **Edge Cases** | Empty inputs, None values handled | Graceful degradation |
+| **Documentation** | Complex logic has comments | Clear intent |
+
 ### Task-Specific Review Criteria (任务专项审查标准)
 
 Each task has specific review criteria listed below.
@@ -33,7 +48,9 @@ Each task has specific review criteria listed below.
 1. **Implementer Self-Review**: After implementation, run tests and verify
 2. **Spec Compliance Review**: Verify code matches plan specification
 3. **Code Quality Review**: Check code style, error handling, documentation
-4. **Regression Check**: Run full test suite to ensure no breakage
+4. **Security Review**: Check for vulnerabilities and secrets
+5. **Performance Review**: Check for inefficiencies
+6. **Regression Check**: Run full test suite to ensure no breakage
 
 ### Review Verdicts (审查结论)
 
@@ -42,6 +59,39 @@ Each task has specific review criteria listed below.
 | **PASS** | All criteria met | Proceed to next task |
 | **PASS_WITH_NOTES** | Minor issues noted | Proceed, address later |
 | **FAIL** | Critical issues found | Fix before proceeding |
+
+### Review Checklist Template (审查清单模板)
+
+```markdown
+## Task N Review Checklist
+
+### Functional (功能)
+- [ ] All required functions exist
+- [ ] All tests pass
+- [ ] Edge cases handled
+
+### Code Quality (代码质量)
+- [ ] Type hints present
+- [ ] No hardcoded values
+- [ ] Proper error handling
+- [ ] Logging implemented
+- [ ] No code duplication
+
+### Security (安全)
+- [ ] No secrets in code
+- [ ] Input validation
+- [ ] SQL injection prevention
+
+### Performance (性能)
+- [ ] No unnecessary API calls
+- [ ] Proper resource cleanup
+- [ ] Reasonable time complexity
+
+### Documentation (文档)
+- [ ] Complex logic commented
+- [ ] Public functions documented
+- [ ] README updated if needed
+```
 
 ---
 
@@ -633,9 +683,9 @@ git commit -m "feat: add SQLite database module with context manager"
 - [ ] scraper.py has HackerNewsScraper class with BASE_URL, REQUEST_DELAY, TIMEOUT
 - [ ] scraper.py has sync and async methods (no duplicate method names)
 - [ ] scraper.py handles timeout and network errors gracefully
-- [ ] test_scraper.py has 4 tests
+- [ ] test_scraper.py has 9 tests
 - [ ] Tests use mocking (no real API calls)
-- [ ] `pytest tests/test_scraper.py -v` passes (4 tests)
+- [ ] `pytest tests/test_scraper.py -v` passes (9 tests)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -851,9 +901,9 @@ git commit -m "feat: add HN API scraper with timeout and error handling"
 **Review Criteria:**
 - [ ] filter.py has NewsFilter class with filter(), _filter_by_score(), _filter_by_keywords(), _exclude_by_keywords(), _deduplicate()
 - [ ] filter.py does NOT fall back to score-only filtering (returns empty if no keyword match)
-- [ ] test_filter.py has 8 tests
+- [ ] test_filter.py has 7 tests
 - [ ] Tests cover: score filtering, keyword filtering, exclusion, deduplication, empty input, no keyword match
-- [ ] `pytest tests/test_filter.py -v` passes (8 tests)
+- [ ] `pytest tests/test_filter.py -v` passes (7 tests)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1725,7 +1775,7 @@ git commit -m "feat: add main entry point with orchestration"
 ## Task 12: Run All Tests
 
 **Review Criteria:**
-- [ ] `pytest tests/ -v` passes all 37 tests
+- [ ] `pytest tests/ -v` passes all 45 tests
 - [ ] No test failures
 - [ ] No regressions from previous tasks
 
@@ -1735,7 +1785,7 @@ git commit -m "feat: add main entry point with orchestration"
 pytest tests/ -v
 ```
 
-Expected: 37 passed
+Expected: 45 passed
 
 - [ ] **Step 2: Verify no regressions**
 
@@ -1749,7 +1799,7 @@ Expected: All tests pass
 
 ```bash
 git add .
-git commit -m "test: verify all 37 tests pass"
+git commit -m "test: verify all 45 tests pass"
 ```
 
 ---
@@ -2028,7 +2078,7 @@ git commit -m "feat: add Docker and systemd deployment configs"
 ## Task 15: Final Verification
 
 **Review Criteria:**
-- [ ] All 37 tests pass
+- [ ] All 45 tests pass
 - [ ] All source files exist in src/
 - [ ] All test files exist in tests/
 - [ ] No uncommitted changes
@@ -2040,7 +2090,7 @@ git commit -m "feat: add Docker and systemd deployment configs"
 pytest tests/ -v --tb=short
 ```
 
-Expected: 37 passed
+Expected: 45 passed
 
 - [ ] **Step 2: Verify project structure**
 
@@ -2067,16 +2117,16 @@ git commit -m "chore: final project verification"
 | 2 | Configuration Module | 3 | 5 |
 | 3 | Logging Module | 1 | - |
 | 4 | Database Module | 2 | 7 |
-| 5 | Scraper Module | 2 | 4 |
-| 6 | Filter Module | 2 | 8 |
+| 5 | Scraper Module | 2 | 9 |
+| 6 | Filter Module | 2 | 7 |
 | 7 | Formatter Module | 2 | 5 |
 | 8 | Notifier Module | 2 | 5 |
 | 9 | Health Check Module | 2 | 3 |
 | 10 | Scheduler Module | 1 | - |
 | 11 | Main Entry Point | 1 | - |
-| 12 | Run All Tests | - | 37 |
+| 12 | Run All Tests | - | 45 |
 | 13 | Documentation | 1 | - |
 | 14 | Deployment Config | 4 | - |
-| 15 | Final Verification | - | 37 |
+| 15 | Final Verification | - | 45 |
 
-**Total:** 28 files, 37 tests
+**Total:** 28 files, 45 tests

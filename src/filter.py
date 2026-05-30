@@ -7,7 +7,6 @@ class NewsFilter:
         self.min_score = config.min_score
         self.keywords = [kw.lower() for kw in config.keywords]
         self.exclude_keywords = [kw.lower() for kw in config.exclude]
-        self.min_results = 3  # 至少保留的结果数
 
     def filter(self, stories: list[dict], pushed_ids: set[int]) -> list[dict]:
         """先按热度，再按关键词，去重"""
