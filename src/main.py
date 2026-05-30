@@ -3,6 +3,7 @@ import logging
 import threading
 from contextlib import contextmanager
 from typing import Optional
+from dotenv import load_dotenv
 
 from src.config import load_config, AppConfig
 from src.logging_config import setup_logging
@@ -104,6 +105,7 @@ def retry_failed_async(config: AppConfig, db: Database) -> None:
 
 def main() -> None:
     """主函数"""
+    load_dotenv()
     config = load_config()
     setup_logging(config.logging.dict())
 
