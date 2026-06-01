@@ -1,4 +1,5 @@
 import logging
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +9,7 @@ class NewsFilter:
         self.keywords = [kw.lower() for kw in config.keywords]
         self.exclude_keywords = [kw.lower() for kw in config.exclude]
 
-    def filter(self, stories: list[dict], pushed_ids: set[int]) -> list[dict]:
+    def filter(self, stories: list[Story], pushed_ids: set[int]) -> list[Story]:
         """先按热度，再按关键词，去重"""
         if not stories:
             return []
@@ -36,25 +37,25 @@ class NewsFilter:
         logger.info(f"Filtered {len(stories)} -> {len(result)} stories")
         return result
 
-    def _filter_by_score(self, stories: list[dict]) -> list[dict]:
-        return [s for s in stories if s.get("score", 0) >= self.min_score]
+    def _filter_by_score(self, stories: list[Story]) -> list[Story]:
+        return [s for s in stories if s.score >= self.min_score]
 
-    def _filter_by_keywords(self, stories: list[dict]) -> list[dict]:
+    def _filter_by_keywords(self, stories: list[Story]) -> list[Story]:
         if not self.keywords:
             return stories
 
         return [s for s in stories
-                if any(kw in s.get("title", "").lower() for kw in self.keywords)]
+                if any(kw in s.title.lower() for kw in self.keywords)]
 
-    def _exclude_by_keywords(self, stories: list[dict]) -> list[dict]:
+    def _exclude_by_keywords(self, stories: list[Story]) -> list[Story]:
         if not self.exclude_keywords:
             return stories
 
         return [s for s in stories
-                if not any(kw in s.get("title", "").lower() for kw in self.exclude_keywords)]
+                if not any(kw in s.title.lower() for kw in self.exclude_keywords)]
 
-    def _deduplicate(self, stories: list[dict], pushed_ids: set[int]) -> list[dict]:
+    def _deduplicate(self, stories: list[Story], pushed_ids: set[int]) -> list[Story]:
         if not pushed_ids:
             return stories
 
-        return [s for s in stories if s["id"] not in pushed_ids]
+        return [s for s in stories if s.id not in pushed_ids]

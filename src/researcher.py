@@ -1,4 +1,5 @@
 import logging
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +31,16 @@ class Researcher:
         self.max_research_length = config.max_research_length
         self.enabled = llm_client.enabled and config.enabled
 
-    def research(self, title: str, summary: str, score: int, url: str) -> dict:
+    def research(self, story: Story) -> dict:
         """对单篇高分文章生成研究报告"""
-        if not self.enabled or not title:
+        if not self.enabled or not story.title:
             return {"report": "", "highlights": []}
 
         user_prompt = USER_PROMPT_TEMPLATE.format(
-            title=title,
-            score=score,
-            summary=summary or "（无摘要）",
-            url=url
+            title=story.title,
+            score=story.agent_score,
+            summary=story.summary or "（无摘要）",
+            url=story.url
         )
 
         result = self.llm.chat_json(
@@ -56,21 +57,15 @@ class Researcher:
 
         return {"report": "", "highlights": []}
 
-    def research_batch(self, stories: list[dict]) -> list[dict]:
+    def research_batch(self, stories: list[Story]) -> list[dict]:
         """批量研究（仅处理高分文章）"""
         if not self.enabled:
             return [{"report": "", "highlights": []} for _ in stories]
 
         results = []
         for story in stories:
-            score = story.get("agent_score", 0)
-            if score >= self.score_threshold:
-                result = self.research(
-                    title=story.get("title", ""),
-                    summary=story.get("summary", ""),
-                    score=score,
-                    url=story.get("url", "")
-                )
+            if story.agent_score >= self.score_threshold:
+                result = self.research(story)
                 results.append(result)
             else:
                 results.append({"report": "", "highlights": []})

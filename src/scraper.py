@@ -3,6 +3,7 @@ import time
 import asyncio
 import logging
 from typing import Optional
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class HackerNewsScraper:
             logger.error(f"Failed to fetch IDs: {e}")
             return []
 
-    def _get_story_detail_sync(self, client: httpx.Client, story_id: int) -> Optional[dict]:
+    def _get_story_detail_sync(self, client: httpx.Client, story_id: int) -> Optional[Story]:
         """同步获取单条故事详情"""
         time.sleep(self.REQUEST_DELAY)
         try:
@@ -95,12 +96,12 @@ class HackerNewsScraper:
             if data is None:
                 logger.warning(f"Story {story_id} not found")
                 return None
-            return data
+            return Story.from_hn(data)
         except Exception as e:
             logger.error(f"Failed to fetch story {story_id}: {e}")
             return None
 
-    async def _get_story_detail_async(self, client: httpx.AsyncClient, story_id: int) -> Optional[dict]:
+    async def _get_story_detail_async(self, client: httpx.AsyncClient, story_id: int) -> Optional[Story]:
         """异步获取单条故事详情"""
         await asyncio.sleep(self.REQUEST_DELAY)
         try:
@@ -110,7 +111,7 @@ class HackerNewsScraper:
             if data is None:
                 logger.warning(f"Story {story_id} not found")
                 return None
-            return data
+            return Story.from_hn(data)
         except Exception as e:
             logger.error(f"Failed to fetch story {story_id}: {e}")
             return None

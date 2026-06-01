@@ -2,16 +2,20 @@ from datetime import datetime
 import logging
 from src.translator import Translator
 from src.classifier import Classifier, CATEGORIES
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
-class MessageFormatter:
-    def __init__(self, agent_enabled: bool = False):
-        self.translator = Translator()
-        self.classifier = Classifier()
-        self.agent_enabled = agent_enabled
+# 消息最大长度（Server酱限制）
+MAX_MESSAGE_LENGTH = 8000
 
-    def format(self, stories: list[dict]) -> str | None:
+
+class MessageFormatter:
+    def __init__(self, llm_client=None, db=None):
+        self.translator = Translator(db)
+        self.classifier = Classifier(llm_client, db)
+
+    def format(self, stories: list[Story]) -> str | None:
         """格式化为 Markdown 消息"""
         if not stories:
             logger.debug("No stories to format")
@@ -22,65 +26,69 @@ class MessageFormatter:
         date_str = datetime.now().strftime("%Y-%m-%d")
         lines = [f"📰 Hacker News 早报 ({date_str})", ""]
 
-        # 批量分类
-        titles = [s.get("title", "Untitled") for s in stories if s and isinstance(s, dict)]
-        classifications = self.classifier.classify_batch(titles) if self.classifier.enabled else []
-
         for i, story in enumerate(stories, 1):
-            if not story or not isinstance(story, dict):
+            if not story or not isinstance(story, Story):
                 logger.warning("Skipping malformed story at index %d: %r", i, story)
                 continue
 
-            title = story.get("title", "Untitled")
-            url = story.get("url", f"https://news.ycombinator.com/item?id={story.get('id', '')}")
-            score = story.get("score", 0)
-            comments = story.get("descendants", 0)
-            age = self._format_age(story.get("time", 0))
-
-            # 获取分类
-            category_tag = ""
-            if i <= len(classifications):
-                cat = classifications[i - 1]
-                cat_key = cat.get("category", "other")
-                category_tag = CATEGORIES.get(cat_key, "其他")
-
-            # Agent 重要性评分
-            agent_score = story.get("agent_score", 0)
-            score_display = f" | 🎯 AI评分: {agent_score}/10" if agent_score else ""
-
-            # 翻译标题
-            title_cn = self.translator.translate(title)
-
             # 分类标签
-            if category_tag:
-                lines.append(f"[{category_tag}]")
+            if story.category:
+                lines.append(f"[{story.category}]")
 
-            lines.append(f"{i}. {title}{score_display}")
-            if self.translator.enabled and title_cn != title:
-                lines.append(f"   【{title_cn}】")
+            # 标题 + AI 评分
+            score_display = f" | 🎯 AI评分: {story.agent_score}/10" if story.agent_score else ""
+            lines.append(f"{i}. {story.title}{score_display}")
 
-            # Agent 摘要（优先使用 AI 摘要）
-            summary = story.get("summary", "")
-            if summary:
-                lines.append(f"   📝 AI摘要: {summary}")
+            # 中文翻译
+            if story.title_cn:
+                lines.append(f"   【{story.title_cn}】")
+
+            # AI 摘要
+            if story.summary:
+                lines.append(f"   📝 AI摘要: {story.summary}")
 
             # 关键要点
-            key_points = story.get("key_points", [])
-            if key_points:
+            if story.key_points:
                 lines.append(f"   💡 要点:")
-                for point in key_points[:3]:  # 最多显示3个要点
+                for point in story.key_points[:3]:
                     lines.append(f"      • {point}")
 
-            lines.append(f"   👍 {score} | 💬 {comments} | 🕐 {age}")
-            lines.append(f"   🔗 {url}")
+            lines.append(f"   👍 {story.score} | 💬 {story.descendants} | 🕐 {self._format_age(story.time)}")
+            lines.append(f"   🔗 {story.url}")
 
             # 研究报告（仅高分文章）
-            research_report = story.get("research_report", "")
-            if research_report:
+            if story.research_report:
                 lines.append(f"   📊 深度分析:")
-                lines.append(f"   {research_report}")
+                lines.append(f"   {story.research_report}")
 
             lines.append("")
+
+        message = "\n".join(lines)
+
+        # 消息长度控制
+        if len(message) > MAX_MESSAGE_LENGTH:
+            message = self._truncate_message(stories, date_str)
+
+        return message
+
+    def _truncate_message(self, stories: list[Story], date_str: str) -> str:
+        """截断过长的消息，只保留标题和评分"""
+        lines = [f"📰 Hacker News 早报 ({date_str})", ""]
+
+        for i, story in enumerate(stories, 1):
+            if not story or not isinstance(story, Story):
+                continue
+
+            score_display = f" | 🎯{story.agent_score}" if story.agent_score else ""
+            lines.append(f"{i}. {story.title}{score_display}")
+            lines.append(f"   👍 {story.score} | 💬 {story.descendants}")
+            lines.append(f"   🔗 {story.url}")
+            lines.append("")
+
+            # 保留前5条的完整内容
+            if i >= 5:
+                lines.append(f"... 还有 {len(stories) - 5} 条，详见完整版")
+                break
 
         return "\n".join(lines)
 

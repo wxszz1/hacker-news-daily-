@@ -18,6 +18,7 @@ from src.llm_client import LLMClient
 from src.scorer import Scorer
 from src.summarizer import Summarizer
 from src.researcher import Researcher
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,9 @@ def _execute_job() -> None:
     config = load_config()
     db = Database(config.database.path)
 
+    # 清理旧缓存
+    db.clear_old_cache(days=7)
+
     stories = _fetch_stories(config)
     filtered = _filter_stories(config, stories, db)
 
@@ -52,11 +56,11 @@ def _execute_job() -> None:
         return
 
     # Agent 处理：评分、摘要、研究
-    enriched = _agent_process(config, filtered)
+    enriched = _agent_process(config, filtered, db)
 
     _push_stories(config, enriched, db)
 
-def _fetch_stories(config: AppConfig) -> list[dict]:
+def _fetch_stories(config: AppConfig) -> list[Story]:
     """爬取阶段"""
     with timer("Fetch stories"):
         scraper = HackerNewsScraper()
@@ -66,9 +70,9 @@ def _fetch_stories(config: AppConfig) -> list[dict]:
 
 def _filter_stories(
     config: AppConfig,
-    stories: list[dict],
+    stories: list[Story],
     db: Database
-) -> list[dict]:
+) -> list[Story]:
     """过滤阶段"""
     with timer("Filter stories"):
         news_filter = NewsFilter(config.filter)
@@ -77,8 +81,8 @@ def _filter_stories(
         logger.info(f"After filter: {len(filtered)} stories")
         return filtered
 
-def _agent_process(config: AppConfig, stories: list[dict]) -> list[dict]:
-    """Agent 处理：评分、摘要、研究"""
+def _agent_process(config: AppConfig, stories: list[Story], db: Database) -> list[Story]:
+    """Agent 处理：评分、摘要、研究（带错误隔离）"""
     if not config.agent.enabled:
         return stories
 
@@ -90,41 +94,52 @@ def _agent_process(config: AppConfig, stories: list[dict]) -> list[dict]:
             return stories
 
         scorer = Scorer(llm_client, config.agent.scorer)
-        summarizer = Summarizer(llm_client, config.agent.summarizer)
+        summarizer = Summarizer(llm_client, config.agent.summarizer, db)
         researcher = Researcher(llm_client, config.agent.researcher)
 
-        # 1. 重要性评分
+        # 1. 重要性评分（带错误隔离）
         logger.info("Scoring stories...")
-        scores = scorer.score_batch(stories)
-        for story, score_info in zip(stories, scores):
-            story["agent_score"] = score_info["importance"]
-            story["agent_score_reason"] = score_info["reason"]
+        try:
+            scores = scorer.score_batch(stories)
+            for story, score_info in zip(stories, scores):
+                story.agent_score = score_info["importance"]
+                story.agent_score_reason = score_info["reason"]
+        except Exception as e:
+            logger.error(f"Scoring failed, skipping: {e}")
 
-        # 2. 智能摘要
+        # 2. 智能摘要（带错误隔离）
         logger.info("Generating summaries...")
-        summaries = summarizer.summarize_batch(stories)
-        for story, summary_info in zip(stories, summaries):
-            story["summary"] = summary_info.get("summary", "")
-            story["key_points"] = summary_info.get("key_points", [])
+        try:
+            summaries = summarizer.summarize_batch(stories)
+            for story, summary_info in zip(stories, summaries):
+                story.summary = summary_info.get("summary", "")
+                story.key_points = summary_info.get("key_points", [])
+        except Exception as e:
+            logger.error(f"Summarization failed, skipping: {e}")
 
-        # 3. 深度研究（仅高分文章）
+        # 3. 深度研究（仅高分文章，带错误隔离）
         logger.info("Researching high-score articles...")
-        research_results = researcher.research_batch(stories)
-        for story, research_info in zip(stories, research_results):
-            story["research_report"] = research_info.get("report", "")
-            story["research_highlights"] = research_info.get("highlights", [])
+        try:
+            research_results = researcher.research_batch(stories)
+            for story, research_info in zip(stories, research_results):
+                story.research_report = research_info.get("report", "")
+                story.research_highlights = research_info.get("highlights", [])
+        except Exception as e:
+            logger.error(f"Research failed, skipping: {e}")
 
         logger.info("Agent processing completed")
         return stories
 
 def _push_stories(
     config: AppConfig,
-    stories: list[dict],
+    stories: list[Story],
     db: Database
 ) -> None:
     """推送阶段"""
     with timer("Push stories"):
-        formatter = MessageFormatter(agent_enabled=config.agent.enabled)
+        # 创建 LLM 客户端用于分类
+        llm_client = LLMClient(config.agent.llm) if config.agent.enabled else None
+        formatter = MessageFormatter(llm_client=llm_client, db=db)
         message = formatter.format(stories)
 
         if not message:
@@ -136,7 +151,7 @@ def _push_stories(
 
         if notifier.send(title, message):
             for story in stories:
-                db.record_pushed(story["id"], story["title"])
+                db.record_pushed(story)
             logger.info(f"Pushed {len(stories)} stories successfully")
         else:
             logger.error("Push failed, will retry next time")

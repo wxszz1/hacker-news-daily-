@@ -1,7 +1,5 @@
 import json
-import httpx
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -28,52 +26,45 @@ SYSTEM_PROMPT = f"""你是一个文章分类助手。根据文章标题，将其
 
 
 class Classifier:
-    """使用智谱 GLM-4 进行文章分类"""
+    """使用 LLMClient 进行文章分类"""
 
-    def __init__(self):
-        self.api_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-        self.api_key = os.getenv("ZHIPU_API_KEY", "")
-        self.model = "glm-4-flash"  # 免费模型
-        self.enabled = bool(self.api_key)
+    def __init__(self, llm_client=None, db=None):
+        self.llm = llm_client
+        self.enabled = llm_client is not None and llm_client.enabled
+        self.db = db
 
     def classify(self, title: str) -> dict:
         """分类单篇文章"""
         if not self.enabled or not title:
             return {"category": "other", "reason": "分类未启用"}
 
-        try:
-            resp = httpx.post(
-                self.api_url,
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": f"请分类这篇文章：{title}"}
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 100
-                },
-                timeout=10
-            )
+        # 检查缓存
+        if self.db:
+            import json as json_mod
+            cached = self.db.get_cache("classify", title)
+            if cached:
+                try:
+                    return json_mod.loads(cached)
+                except:
+                    pass
 
-            if resp.status_code == 200:
-                content = resp.json()["choices"][0]["message"]["content"]
-                # 提取JSON
-                start = content.find("{")
-                end = content.rfind("}") + 1
-                if start != -1 and end > start:
-                    return json.loads(content[start:end])
-        except Exception as e:
-            logger.warning(f"Classification failed for '{title}': {e}")
+        result = self.llm.chat_json(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=f"请分类这篇文章：{title}",
+            max_tokens=100
+        )
+
+        if result:
+            # 写入缓存
+            if self.db:
+                import json as json_mod
+                self.db.set_cache("classify", title, json_mod.dumps(result, ensure_ascii=False))
+            return result
 
         return {"category": "other", "reason": "分类失败"}
 
-    def classify_batch(self, titles: list[str]) -> list[dict]:
+    def classify_batch(self, stories: list) -> list[dict]:
         """批量分类"""
         if not self.enabled:
-            return [{"category": "other", "reason": "分类未启用"} for _ in titles]
-        return [self.classify(t) for t in titles]
+            return [{"category": "other", "reason": "分类未启用"} for _ in stories]
+        return [self.classify(s.title) for s in stories]

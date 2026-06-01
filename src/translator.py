@@ -11,15 +11,22 @@ class Translator:
 
     API_URL = "https://fanyi-api.baidu.com/api/trans/vip/translate"
 
-    def __init__(self):
+    def __init__(self, db=None):
         self.app_id = os.getenv("BAIDU_FANYI_APPID", "")
         self.secret = os.getenv("BAIDU_FANYI_SECRET", "")
         self.enabled = bool(self.app_id and self.secret)
+        self.db = db
 
     def translate(self, text: str) -> str:
         """翻译英文为中文"""
         if not text or not isinstance(text, str) or not self.enabled:
             return text
+
+        # 检查缓存
+        if self.db:
+            cached = self.db.get_cache("translate", text)
+            if cached:
+                return cached
 
         try:
             salt = str(random.randint(1, 65536))
@@ -40,7 +47,11 @@ class Translator:
             )
             result = resp.json()
             if "trans_result" in result:
-                return result["trans_result"][0]["dst"]
+                translated = result["trans_result"][0]["dst"]
+                # 写入缓存
+                if self.db:
+                    self.db.set_cache("translate", text, translated)
+                return translated
         except Exception as e:
             logger.warning(f"Translation failed: {e}")
 

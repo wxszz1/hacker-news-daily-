@@ -1,4 +1,5 @@
 import logging
+from src.models import Story
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +35,15 @@ class Scorer:
         self.threshold = config.threshold
         self.enabled = llm_client.enabled and config.enabled
 
-    def score(self, title: str, hn_score: int, url: str) -> dict:
+    def score(self, story: Story) -> dict:
         """评估单篇文章重要性"""
-        if not self.enabled or not title:
+        if not self.enabled or not story.title:
             return {"importance": 5, "reason": "评分未启用"}
 
         user_prompt = USER_PROMPT_TEMPLATE.format(
-            title=title,
-            score=hn_score,
-            url=url
+            title=story.title,
+            score=story.score,
+            url=story.url
         )
 
         result = self.llm.chat_json(
@@ -62,23 +63,19 @@ class Scorer:
 
         return {"importance": 5, "reason": "评分失败"}
 
-    def score_batch(self, stories: list[dict]) -> list[dict]:
+    def score_batch(self, stories: list[Story]) -> list[dict]:
         """批量评分"""
         if not self.enabled:
             return [{"importance": 5, "reason": "评分未启用"} for _ in stories]
 
         results = []
         for story in stories:
-            result = self.score(
-                title=story.get("title", ""),
-                hn_score=story.get("score", 0),
-                url=story.get("url", "")
-            )
+            result = self.score(story)
             results.append(result)
 
         return results
 
-    def filter_by_threshold(self, stories: list[dict], scores: list[dict]) -> list[tuple[dict, dict]]:
+    def filter_by_threshold(self, stories: list[Story], scores: list[dict]) -> list[tuple[Story, dict]]:
         """根据阈值过滤文章"""
         filtered = []
         for story, score_info in zip(stories, scores):
