@@ -39,3 +39,35 @@ logging:
 scheduler:
   cron: "0 8 * * *"         # 每天 08:00 执行
   timezone: "Asia/Shanghai"
+
+# Agent 配置
+agent:
+  enabled: true              # 是否启用 Agent 功能
+
+  # LLM 配置
+  llm:
+    model: "glm-4-flash"    # 模型名称（flash 免费）
+    timeout: 30              # API 超时（秒）
+    max_retries: 2           # 重试次数
+    temperature: 0.3         # 生成温度
+
+  # 重要性评分配置
+  scorer:
+    enabled: true
+    threshold: 6             # 重要性阈值（1-10），低于此分不推送
+    batch_size: 5            # 批量评分每批数量
+
+  # 智能摘要配置
+  summarizer:
+    enabled: true
+    max_length: 200          # 摘要最大字数
+    include_key_points: true # 是否包含关键要点
+    batch_size: 5            # 批量摘要每批数量
+
+  # 自主研究配置
+  researcher:
+    enabled: true
+    score_threshold: 8       # 触发研究的最低评分
+    max_related_articles: 3  # 搜索相关文章最大数量
+    max_research_length: 500 # 研究报告最大字数
+    timeout: 60              # 研究超时（秒）
