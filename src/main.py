@@ -14,6 +14,10 @@ from src.notifier import ServerChanNotifier
 from src.database import Database
 from src.health import HealthChecker
 from src.scheduler import Scheduler
+from src.llm_client import LLMClient
+from src.scorer import Scorer
+from src.summarizer import Summarizer
+from src.researcher import Researcher
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +51,10 @@ def _execute_job() -> None:
         logger.info("No new stories to push")
         return
 
-    _push_stories(config, filtered, db)
+    # Agent 处理：评分、摘要、研究
+    enriched = _agent_process(config, filtered)
+
+    _push_stories(config, enriched, db)
 
 def _fetch_stories(config: AppConfig) -> list[dict]:
     """爬取阶段"""
@@ -70,6 +77,46 @@ def _filter_stories(
         logger.info(f"After filter: {len(filtered)} stories")
         return filtered
 
+def _agent_process(config: AppConfig, stories: list[dict]) -> list[dict]:
+    """Agent 处理：评分、摘要、研究"""
+    if not config.agent.enabled:
+        return stories
+
+    with timer("Agent processing"):
+        llm_client = LLMClient(config.agent.llm)
+
+        if not llm_client.enabled:
+            logger.warning("LLM API key not set, skipping agent processing")
+            return stories
+
+        scorer = Scorer(llm_client, config.agent.scorer)
+        summarizer = Summarizer(llm_client, config.agent.summarizer)
+        researcher = Researcher(llm_client, config.agent.researcher)
+
+        # 1. 重要性评分
+        logger.info("Scoring stories...")
+        scores = scorer.score_batch(stories)
+        for story, score_info in zip(stories, scores):
+            story["agent_score"] = score_info["importance"]
+            story["agent_score_reason"] = score_info["reason"]
+
+        # 2. 智能摘要
+        logger.info("Generating summaries...")
+        summaries = summarizer.summarize_batch(stories)
+        for story, summary_info in zip(stories, summaries):
+            story["summary"] = summary_info.get("summary", "")
+            story["key_points"] = summary_info.get("key_points", [])
+
+        # 3. 深度研究（仅高分文章）
+        logger.info("Researching high-score articles...")
+        research_results = researcher.research_batch(stories)
+        for story, research_info in zip(stories, research_results):
+            story["research_report"] = research_info.get("report", "")
+            story["research_highlights"] = research_info.get("highlights", [])
+
+        logger.info("Agent processing completed")
+        return stories
+
 def _push_stories(
     config: AppConfig,
     stories: list[dict],
@@ -77,7 +124,7 @@ def _push_stories(
 ) -> None:
     """推送阶段"""
     with timer("Push stories"):
-        formatter = MessageFormatter()
+        formatter = MessageFormatter(agent_enabled=config.agent.enabled)
         message = formatter.format(stories)
 
         if not message:
