@@ -38,6 +38,42 @@ class SchedulerConfig(BaseModel):
     timezone: str = Field(default="Asia/Shanghai")
     misfire_grace_time: int = Field(default=3600, ge=0)
 
+class ClassifierConfig(BaseModel):
+    enabled: bool = Field(default=False)
+    categories: list[str] = Field(default_factory=list)  # 空列表表示显示所有分类
+
+class LLMConfig(BaseModel):
+    model: str = Field(default="glm-4-flash")
+    api_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4/chat/completions")
+    timeout: int = Field(default=30, ge=5, le=120)
+    max_retries: int = Field(default=2, ge=0, le=5)
+    temperature: float = Field(default=0.3, ge=0.0, le=1.0)
+
+class ScorerConfig(BaseModel):
+    enabled: bool = Field(default=True)
+    threshold: int = Field(default=6, ge=1, le=10)
+    batch_size: int = Field(default=5, ge=1, le=20)
+
+class SummarizerConfig(BaseModel):
+    enabled: bool = Field(default=True)
+    max_length: int = Field(default=200, ge=50, le=500)
+    include_key_points: bool = Field(default=True)
+    batch_size: int = Field(default=5, ge=1, le=20)
+
+class ResearcherConfig(BaseModel):
+    enabled: bool = Field(default=True)
+    score_threshold: int = Field(default=8, ge=1, le=10)
+    max_related_articles: int = Field(default=3, ge=1, le=10)
+    max_research_length: int = Field(default=500, ge=100, le=2000)
+    timeout: int = Field(default=60, ge=10, le=300)
+
+class AgentConfig(BaseModel):
+    enabled: bool = Field(default=True)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    scorer: ScorerConfig = Field(default_factory=ScorerConfig)
+    summarizer: SummarizerConfig = Field(default_factory=SummarizerConfig)
+    researcher: ResearcherConfig = Field(default_factory=ResearcherConfig)
+
 class AppConfig(BaseModel):
     hackernews: HackerNewsConfig = Field(default_factory=HackerNewsConfig)
     filter: FilterConfig
@@ -45,6 +81,7 @@ class AppConfig(BaseModel):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
 
 def get_project_root() -> Path:
     """获取项目根目录"""
