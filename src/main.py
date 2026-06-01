@@ -19,6 +19,7 @@ from src.scorer import Scorer
 from src.summarizer import Summarizer
 from src.researcher import Researcher
 from src.models import Story
+from src.agent.core import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +194,27 @@ def main() -> None:
     # 启动调度器
     scheduler = Scheduler(config, run_job)
     scheduler.start()
+
+def run_agent_task(user_input: str) -> str:
+    """执行 Agent 任务"""
+    load_dotenv()
+    config = load_config()
+
+    # 创建 LLM 客户端
+    from src.llm_client import LLMClient
+    llm_client = LLMClient(config.agent.llm)
+
+    if not llm_client.enabled:
+        return "Agent 未启用，请配置 ZHIPU_API_KEY"
+
+    # 创建 Agent
+    agent = Agent(
+        llm_client=llm_client,
+        send_key=config.serverchan.send_key
+    )
+
+    # 执行任务
+    return agent.run(user_input)
 
 if __name__ == "__main__":
     main()
