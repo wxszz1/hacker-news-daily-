@@ -36,6 +36,7 @@ def run_job() -> None:
 
 def _execute_job() -> None:
     """执行任务核心逻辑"""
+    load_dotenv()
     config = load_config()
     db = Database(config.database.path)
 

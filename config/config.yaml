@@ -24,10 +24,6 @@ filter:
     - hiring
     - "ask hn: who is hiring"
 
-# 推送配置
-serverchan:
-  send_key: "${SERVERCHAN_KEY}"  # 环境变量引用
-
 # 数据库
 database:
   path: "data/hackernews.db"
