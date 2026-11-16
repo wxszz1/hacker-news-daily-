@@ -44,8 +44,8 @@ def test_get_story_detail_sync_success(mock_sleep, mock_client):
     scraper = HackerNewsScraper()
     story = scraper._get_story_detail_sync(mock_client.return_value.__enter__.return_value, 123)
 
-    assert story["id"] == 123
-    assert story["title"] == "Test"
+    assert story.id == 123
+    assert story.title == "Test"
 
 @patch('src.scraper.httpx.Client')
 @patch('src.scraper.time.sleep')
@@ -89,8 +89,8 @@ def test_fetch_top_stories_sync(mock_client_cls, mock_sleep):
     results = scraper.fetch_top_stories_sync(limit=3)
 
     assert len(results) == 3
-    assert results[0]["id"] == 101
-    assert results[2]["id"] == 103
+    assert results[0].id == 101
+    assert results[2].id == 103
 
 @patch('src.scraper.time.sleep')
 @patch('src.scraper.httpx.Client')
@@ -130,8 +130,8 @@ async def test_fetch_top_stories_async(mock_async_client_cls, mock_sleep):
     results = await scraper.fetch_top_stories(limit=2)
 
     assert len(results) == 2
-    assert results[0]["id"] == 201
-    assert results[1]["id"] == 202
+    assert results[0].id == 201
+    assert results[1].id == 202
 
 @patch('src.scraper.asyncio.sleep', new_callable=AsyncMock)
 @patch('src.scraper.httpx.AsyncClient')

@@ -1,8 +1,7 @@
 import os
 import yaml
 from pathlib import Path
-from pydantic import BaseModel, Field
-from pydantic import validator
+from pydantic import BaseModel, Field, field_validator
 
 class HackerNewsConfig(BaseModel):
     top_stories_limit: int = Field(default=30, ge=1, le=100)
@@ -13,7 +12,8 @@ class FilterConfig(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
 
-    @validator("keywords")
+    @field_validator("keywords")
+    @classmethod
     def validate_keywords(cls, v):
         if not v:
             raise ValueError("keywords cannot be empty")

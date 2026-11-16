@@ -2,6 +2,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from src.database import Database
+from src.models import Story
 
 @pytest.fixture
 def db():
@@ -22,22 +23,22 @@ def test_get_pushed_ids_empty(db):
 
 def test_record_pushed(db):
     """测试记录已推送"""
-    db.record_pushed(123, "Test Article")
+    db.record_pushed(Story(id=123, title="Test Article"))
     ids = db.get_pushed_ids()
     assert 123 in ids
 
 def test_record_pushed_duplicate(db):
     """测试记录重复已推送"""
-    db.record_pushed(123, "Test Article")
-    db.record_pushed(123, "Test Article Again")
+    db.record_pushed(Story(id=123, title="Test Article"))
+    db.record_pushed(Story(id=123, title="Test Article Again"))
     ids = db.get_pushed_ids()
     assert len(ids) == 1
 
 def test_get_pushed_ids_multiple(db):
     """测试获取多个已推送 ID"""
-    db.record_pushed(123, "Article 1")
-    db.record_pushed(456, "Article 2")
-    db.record_pushed(789, "Article 3")
+    db.record_pushed(Story(id=123, title="Article 1"))
+    db.record_pushed(Story(id=456, title="Article 2"))
+    db.record_pushed(Story(id=789, title="Article 3"))
     ids = db.get_pushed_ids()
     assert ids == {123, 456, 789}
 

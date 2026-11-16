@@ -1,6 +1,7 @@
 import pytest
 from src.health import HealthChecker
 from src.database import Database
+from src.models import Story
 import tempfile
 from pathlib import Path
 
@@ -26,7 +27,7 @@ def test_check_daily_job_empty(health_checker):
 
 def test_check_daily_job_with_push(health_checker, db):
     """测试健康检查 - 有推送记录"""
-    db.record_pushed(123, "Test Article")
+    db.record_pushed(Story(id=123, title="Test Article"))
     status = health_checker.check_daily_job()
     assert status["pushed_today"] == 1
     assert status["last_push"] is not None

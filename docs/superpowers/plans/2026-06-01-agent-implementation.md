@@ -108,7 +108,7 @@ class ToolRegistry:
 - [ ] **Step 3: 运行测试验证**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.agent.tools import Tool, ToolRegistry; print('Tool system OK')"
 ```
 
@@ -575,7 +575,7 @@ class Planner:
 - [ ] **Step 2: 验证模块**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.agent.planner import Planner; print('Planner OK')"
 ```
 
@@ -697,7 +697,7 @@ class Reflector:
 - [ ] **Step 2: 验证模块**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.agent.reflector import Reflector; print('Reflector OK')"
 ```
 
@@ -865,7 +865,7 @@ class Memory:
 - [ ] **Step 2: 验证模块**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.agent.memory import Memory; m = Memory(); print('Memory OK')"
 ```
 
@@ -1071,7 +1071,7 @@ class Agent:
 - [ ] **Step 2: 验证模块**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.agent.core import Agent; print('Agent Core OK')"
 ```
 
@@ -1125,7 +1125,7 @@ def run_agent_task(user_input: str) -> str:
 - [ ] **Step 2: 验证集成**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python -c "from src.main import run_agent_task; print('Integration OK')"
 ```
 
@@ -1191,7 +1191,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: 运行测试**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 python tests/test_agent.py
 ```
 
@@ -1211,20 +1211,20 @@ git commit -m "test: 添加 Agent 完整链路测试"
 - [ ] **Step 1: 推送到 GitHub**
 
 ```bash
-cd "C:\Users\10954\Desktop\hacker-news-agent"
+cd /path/to/hacker-news-agent
 git push
 ```
 
 - [ ] **Step 2: 服务器拉取代码**
 
 ```bash
-ssh -i "C:\Users\10954\.ssh\id_ed25519" admin@47.109.80.101 "cd ~/hacker-news-agent && git pull && sudo systemctl restart hackernews"
+ssh -i /path/to/deploy_key user@your-server "cd ~/hacker-news-agent && git pull && sudo systemctl restart hackernews"
 ```
 
 - [ ] **Step 3: 验证服务状态**
 
 ```bash
-ssh -i "C:\Users\10954\.ssh\id_ed25519" admin@47.109.80.101 "sudo systemctl status hackernews --no-pager"
+ssh -i /path/to/deploy_key user@your-server "sudo systemctl status hackernews --no-pager"
 ```
 
 Expected: 服务正常运行

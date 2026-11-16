@@ -14,14 +14,26 @@ build/
 data/
 logs/
 
-# 环境变量
+# 环境变量（保留 .env.example 作为占位模板）
 .env
+.env.*
+!.env.example
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# 测试与本地数据库
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite
+*.sqlite3
 
 # 系统
 .DS_Store

@@ -15,7 +15,7 @@ class HackerNewsScraper:
     def __init__(self) -> None:
         pass
 
-    def fetch_top_stories_sync(self, limit: int = 30) -> list[dict]:
+    def fetch_top_stories_sync(self, limit: int = 30) -> list[Story]:
         """同步获取 top stories"""
         if limit is None or limit < 1:
             limit = 30  # default
@@ -39,7 +39,7 @@ class HackerNewsScraper:
             logger.error(f"Network error fetching stories: {e}")
             return []
 
-    async def fetch_top_stories(self, limit: int = 30) -> list[dict]:
+    async def fetch_top_stories(self, limit: int = 30) -> list[Story]:
         """异步获取 top stories"""
         if limit is None or limit < 1:
             limit = 30  # default
@@ -52,13 +52,13 @@ class HackerNewsScraper:
 
                 semaphore = asyncio.Semaphore(5)  # max 5 concurrent requests
 
-                async def bounded_fetch(sid: int) -> Optional[dict]:
+                async def bounded_fetch(sid: int) -> Optional[Story]:
                     async with semaphore:
                         return await self._get_story_detail_async(client, sid)
 
                 tasks = [bounded_fetch(sid) for sid in story_ids[:limit]]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                return [r for r in results if isinstance(r, dict)]
+                return [r for r in results if isinstance(r, Story)]
         except httpx.TimeoutException:
             logger.error("Timeout fetching stories from HN API")
             return []

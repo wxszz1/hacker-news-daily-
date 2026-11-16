@@ -54,7 +54,8 @@ class MessageFormatter:
                     lines.append(f"      • {point}")
 
             lines.append(f"   👍 {story.score} | 💬 {story.descendants} | 🕐 {self._format_age(story.time)}")
-            lines.append(f"   🔗 {story.url}")
+            url = story.url or f"https://news.ycombinator.com/item?id={story.id}"
+            lines.append(f"   🔗 {url}")
 
             # 研究报告（仅高分文章）
             if story.research_report:
@@ -82,7 +83,8 @@ class MessageFormatter:
             score_display = f" | 🎯{story.agent_score}" if story.agent_score else ""
             lines.append(f"{i}. {story.title}{score_display}")
             lines.append(f"   👍 {story.score} | 💬 {story.descendants}")
-            lines.append(f"   🔗 {story.url}")
+            url = story.url or f"https://news.ycombinator.com/item?id={story.id}"
+            lines.append(f"   🔗 {url}")
             lines.append("")
 
             # 保留前5条的完整内容
